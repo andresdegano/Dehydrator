@@ -86,16 +86,139 @@ Temp > 62°C   → Cold Air Fan (cooling)
 1. **Wire your sensor** (see wiring diagrams below)
 2. **Build and upload:**
    ```bash
-   # For DHT22
-   pio run -e uno -t upload
+   # For DHT22 sensor
+   pio run -e uno-dht22 -t upload
    
-   # For SHT31 I2C
-   pio run -e uno -t upload
+   # For SHT31 I2C sensor
+   pio run -e uno-sht31 -t upload
    ```
 3. **Monitor output:**
    ```bash
-   pio device monitor
+   pio device monitor -b 9600
    ```
+
+### Available Build Environments
+
+The project supports multiple build environments via `platformio.ini`. Choose based on your sensor type and target platform:
+
+**Wokwi Simulator (Testing):**
+```bash
+pio run -e uno-wokwi    # DHT22 sensor simulation
+pio run -e i2c-wokwi    # SHT31 sensor simulation
+```
+
+**Physical Arduino Hardware (Deployment):**
+```bash
+pio run -e uno-dht22    # Arduino Uno with DHT22 (Pin 7)
+pio run -e uno-sht31    # Arduino Uno with SHT31 (I2C: A4/A5)
+```
+
+**Environment Details:**
+
+| Environment | Platform | Sensor | Use Case |
+|---|---|---|---|
+| `uno-wokwi` | Wokwi Emulator | DHT22 | Testing with web simulator |
+| `i2c-wokwi` | Wokwi Emulator | SHT31 | Testing with I2C sensor |
+| `uno-dht22` | Arduino Uno | DHT22 | Hardware deployment, single-wire sensor |
+| `uno-sht31` | Arduino Uno | SHT31 | Hardware deployment, I2C sensor |
+
+**Upload and Monitor:**
+```bash
+# Compile only
+pio run -e uno-dht22
+
+# Compile and upload
+pio run -e uno-dht22 -t upload
+
+# Compile, upload, and monitor serial output
+pio run -e uno-dht22 -t upload && pio device monitor -b 9600
+```
+
+## Upload to Physical Arduino
+
+### 1. **Connect Arduino to Computer**
+- Plug the Arduino Uno into your computer via USB cable
+- The device will appear as `/dev/ttyUSB0`, `/dev/ttyACM0`, or `/dev/cu.usbserial-*` (depending on OS/driver)
+
+### 2. **Choose Your Sensor Environment**
+
+**For DHT22 sensor:**
+```bash
+cd /Users/andresdegano/projects/Arduino/Dehydrator
+pio run -e uno-dht22 -t upload
+```
+
+**For SHT31 sensor (I2C):**
+```bash
+cd /Users/andresdegano/projects/Arduino/Dehydrator
+pio run -e uno-sht31 -t upload
+```
+
+### 3. **Verify Successful Upload**
+You should see output like:
+```
+Uploading .pio/build/uno-dht22/firmware.hex
+Uploading [████████████████████████████] 100% Done
+========================= [SUCCESS] =========================
+```
+
+### 4. **View Serial Output**
+After successful upload, monitor the serial output:
+```bash
+# Auto-detect port and monitor
+pio device monitor -b 9600
+
+# Or specify port manually
+pio device monitor -p /dev/ttyUSB0 -b 9600
+```
+
+You should see readings like:
+```
+[Temp: 24.5°C | Target: 60.0°C | Humidity: 45.3%] [Hot:ON | Heat:OFF | Cold:OFF]
+```
+
+### 5. **Troubleshooting**
+
+**If upload fails with "port not found":**
+```bash
+# List available COM ports
+pio device list
+
+# Then specify the port
+pio run -e uno-dht22 -t upload --upload-port /dev/ttyUSB0
+```
+
+**If you get permission denied errors (Linux/Mac):**
+```bash
+# Give user permission to access serial port
+sudo usermod -a -G dialout $USER
+# Then restart your terminal or log out and back in
+```
+
+**If IDE/upload is slow:**
+- Check USB cable quality
+- Try a different USB port
+- Verify baud rate matches (9600 in our config)
+
+### 6. **Complete Workflow**
+
+Quick one-liner to build, upload, and monitor:
+```bash
+# DHT22
+pio run -e uno-dht22 -t upload && pio device monitor -b 9600
+
+# SHT31
+pio run -e uno-sht31 -t upload && pio device monitor -b 9600
+```
+
+### 7. **Hardware Wiring Reminder**
+
+Make sure your Arduino is properly wired before uploading:
+- **DHT22**: Data pin → Pin 7, VCC → 5V, GND → GND
+- **SHT31**: SDA → A4, SCL → A5, VCC → 5V, GND → GND
+- **Relays**: Pins 8, 9, 10 to relay module IN pins
+- **Buttons**: Pins 2, 3 to buttons with pull-down resistors
+- **LCD I2C**: SDA → A4, SCL → A5
 
 ## Sensor Versions
 
