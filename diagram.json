@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "author": "Arduino Dehydrator Project",
+  "title": "Arduino Dehydrator with DHT22, 3 Relays & LCD Display",
+  "description": "Simulated Arduino Uno with DHT22 sensor, 3 relay modules (2 fans + heater), and LCD 1602 I2C display",
+  "parts": [
+    {
+      "type": "wokwi-arduino-uno",
+      "id": "uno",
+      "top": 0,
+      "left": 0,
+      "attrs": {
+        "name": "Arduino Uno"
+      }
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": 100,
+      "left": 300,
+      "attrs": {
+        "name": "DHT22 Sensor"
+      }
+    },
+    {
+      "type": "wokwi-relay",
+      "id": "relay1",
+      "top": 300,
+      "left": 300,
+      "attrs": {
+        "name": "Hot Air Fan Relay (Pin 8)"
+      }
+    },
+    {
+      "type": "wokwi-relay",
+      "id": "relay2",
+      "top": 400,
+      "left": 300,
+      "attrs": {
+        "name": "Cold Air Fan Relay (Pin 9)"
+      }
+    },
+    {
+      "type": "wokwi-relay",
+      "id": "relay3",
+      "top": 500,
+      "left": 300,
+      "attrs": {
+        "name": "Electric Heater Relay (Pin 10)"
+      }
+    },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd1",
+      "top": 100,
+      "left": 600,
+      "attrs": {
+        "name": "LCD 1602 (I2C)",
+        "pins": "I2C"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "uno:GND.1",
+      "dht1:GND",
+      "black",
+      []
+    ],
+    [
+      "uno:7",
+      "dht1:SDA",
+      "green",
+      []
+    ],
+    [
+      "uno:5V",
+      "dht1:VCC",
+      "red",
+      []
+    ],
+    [
+      "uno:8",
+      "relay1:IN",
+      "orange",
+      []
+    ],
+    [
+      "uno:GND.1",
+      "relay1:GND",
+      "black",
+      []
+    ],
+    [
+      "uno:5V",
+      "relay1:VCC",
+      "red",
+      []
+    ],
+    [
+      "uno:9",
+      "relay2:IN",
+      "blue",
+      []
+    ],
+    [
+      "uno:GND.1",
+      "relay2:GND",
+      "black",
+      []
+    ],
+    [
+      "uno:5V",
+      "relay2:VCC",
+      "red",
+      []
+    ],
+    [
+      "uno:10",
+      "relay3:IN",
+      "purple",
+      []
+    ],
+    [
+      "uno:GND.1",
+      "relay3:GND",
+      "black",
+      []
+    ],
+    [
+      "uno:5V",
+      "relay3:VCC",
+      "red",
+      []
+    ],
+    [
+      "uno:A4",
+      "lcd1:SDA",
+      "green",
+      []
+    ],
+    [
+      "uno:A5",
+      "lcd1:SCL",
+      "yellow",
+      []
+    ],
+    [
+      "uno:5V",
+      "lcd1:VCC",
+      "red",
+      []
+    ],
+    [
+      "uno:GND.1",
+      "lcd1:GND",
+      "black",
+      []
+    ]
+  ]
+}

@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = ".pio/build/uno-wokwi/firmware.elf"
+diagram = "diagram-dht.json"

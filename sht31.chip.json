@@ -1,0 +1,32 @@
+{
+  "name": "SHT31 Temperature & Humidity Sensor",
+  "label": "SHT31",
+  "author": "Sensirion",
+  "title": "SHT31-D Digital Humidity and Temperature Sensor",
+  "description": "I2C temperature and humidity sensor",
+  "version": "1.0",
+  "url": "https://sensirion.com/products/catalog/SHT31-D/",
+  "image": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' fill='%23333'/%3E%3Ctext x='80' y='80' text-anchor='middle' dy='.3em' fill='%23fff' font-size='20'%3ESHT31%3C/text%3E%3C/svg%3E",
+  "pins": ["VCC", "GND", "SDA", "SCL"],
+  "pinLabels": {
+    "VCC": "Power (3-5V)",
+    "GND": "Ground",
+    "SDA": "I2C Data",
+    "SCL": "I2C Clock"
+  },
+  "pinout": {
+    "1": "VCC",
+    "2": "GND",
+    "3": "SDA",
+    "4": "SCL"
+  },
+  "attrs": [
+    {
+      "name": "address",
+      "title": "I2C Address",
+      "description": "I2C slave address (0x44 or 0x45)",
+      "default": "0x44",
+      "type": "string"
+    }
+  ]
+}
