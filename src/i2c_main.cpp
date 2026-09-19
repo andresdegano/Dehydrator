@@ -26,7 +26,6 @@ uint8_t sht31_address = 0x44;
 // Temperature control setpoint (now variable, can be adjusted via buttons)
 float targetTemp = 60.0;
 #define HYSTERESIS 2.0      // ±2°C to prevent relay chatter
-#define HEATER_THRESHOLD 54.0  // Activate heater below this temp
 #define TEMP_MIN 35.0       // Minimum allowed target temperature
 #define TEMP_MAX 75.0       // Maximum allowed target temperature
 
@@ -80,7 +79,7 @@ void setup() {
   
   // Initialize I2C for both LCD and SHT31 sensor
   Wire.begin();
-  delay(100);
+  delay(500);
   
   // Initialize LCD display
   lcd.init();
@@ -108,10 +107,6 @@ void setup() {
   Serial.println("  SCL: A5 (Pin 19)");
   Serial.println("  VCC: 5V");
   Serial.println("  GND: GND\n");
-  
-  // Initialize I2C
-  Wire.begin();
-  delay(500);
   
   // Scan I2C bus
   scanI2CBus();

@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Wire.h>
 #include <SimpleDHT.h>
 #include <LiquidCrystal_I2C.h>
 
@@ -21,7 +22,6 @@ LiquidCrystal_I2C lcd(0x3F, 16, 2);
 // Temperature control setpoint (now variable, can be adjusted via buttons)
 float targetTemp = 60.0;
 #define HYSTERESIS 2.0      // ±2°C to prevent relay chatter
-#define HEATER_THRESHOLD 54.0  // Activate heater below this temp
 #define TEMP_MIN 35.0       // Minimum allowed target temperature
 #define TEMP_MAX 75.0       // Maximum allowed target temperature
 

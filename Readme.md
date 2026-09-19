@@ -5,60 +5,175 @@ An Arduino-based environmental monitoring system for a solar-powered dehydrator 
 ## How It Works
 
 ### System Overview
-The dehydrator controller monitors ambient temperature and humidity using one of two available sensor types. Based on sensor readings, the system can:
-- Monitor drying chamber conditions in real-time
-- Automatically control heating/cooling via 3-relay system to maintain optimal temperature
-- Log environmental data via serial output and LCD display
-- Support both emulated testing (Wokwi) and real hardware deployment
+The dehydrator controller maintains optimal drying conditions by monitoring temperature and humidity using one of two available sensor types (DHT22 or SHT31). The system automatically controls a 3-relay heating/cooling system based on sensor readings, displays real-time data on an LCD, and allows runtime temperature adjustment via push buttons.
 
-### Sensor Reading Flow
-1. **Initialization**: On startup, the Arduino initializes the selected sensor (DHT22 or SHT31)
-2. **Reading**: Sensor is queried at regular intervals (typically every few seconds)
-3. **Data Processing**: Temperature and humidity values are read and validated
-4. **Relay Control**: Based on temperature, the system activates/deactivates heating and cooling
-5. **Display Update**: Current readings and relay status shown on LCD
-6. **Output**: Data is printed to serial monitor for monitoring/logging
-7. **Control Loop**: System repeats indefinitely
+**Key Features:**
+- Real-time temperature and humidity monitoring
+- Automatic heating/cooling control to maintain target temperature
+- LCD display showing current readings and active relay status
+- Push button interface for runtime temperature adjustment (35-75°C)
+- Serial logging of all readings and relay state changes
+- Non-blocking control loop (sensor reads every 2 seconds, buttons checked every loop)
+
+### Main Control Loop
+The `loop()` function operates on two timescales:
+
+**Fast Loop (Every iteration, < 1ms):**
+1. Check for button presses (temperature adjustment)
+2. Update button state tracking for debouncing
+
+**Slow Loop (Every 2 seconds, non-blocking):**
+1. Read temperature and humidity from sensor
+2. Validate sensor readings
+3. Update LCD display with current values and relay status
+4. Execute relay control logic based on temperature
+5. Log readings to serial monitor
+
+This hybrid approach ensures responsive button input while avoiding sensor read delays.
 
 ### Relay Control System
 
-The system uses **3 relays** to automatically maintain optimal drying conditions:
+The system uses **3 relays** to automatically maintain optimal drying conditions through temperature feedback:
+
+**Configuration:**
+- **Target Temperature**: 60°C (default, adjustable 35-75°C via buttons)
+- **Hysteresis**: ±2°C (prevents relay chatter and rapid switching)
+- **Sensor Read Interval**: 2 seconds
 
 **Temperature Control Logic:**
-- **Target Temperature**: 60°C (default, adjustable via push buttons)
-- **Hysteresis**: ±2°C (prevents relay chatter/rapid switching)
 
-**Relay Operations:**
+The `controlRelays()` function implements a three-zone control strategy:
 
-1. **Hot Air Fan (Pin 8)** - Activates when T < 58°C
-   - Draws warm ambient air through drying chamber
-   - Primary heating method using solar-heated air
-   - Stays on until target temperature is reached
+| Temperature Range | Action | Rationale |
+|---|---|---|
+| **T < 58°C** (below target - HYSTERESIS) | Activate HOT AIR FAN | Primary heating using solar-preheated air |
+| **T < 54°C** (far below target) | ALSO activate ELECTRIC HEATER | Backup heating for cloudy days/cold nights |
+| **58°C ≤ T ≤ 62°C** (target zone) | Idle (keep fan running if on) | Prevent frequent switching; maintain circulation |
+| **T > 62°C** (above target + HYSTERESIS) | Activate COLD AIR FAN, turn off heater | Prevent overheating; protect food quality |
 
-2. **Electric Heater (Pin 10)** - Activates when T < 54°C
-   - Backup heating for cloudy days or cold nights
-   - Only turns on when hot air fan alone can't reach target
-   - Automatically turns off once T ≥ 60°C
+**Relay Pin Assignment:**
+1. **HOT AIR FAN (Pin 8)** - Primary heating
+   - Draws warm ambient or solar-heated air through chamber
+   - Active when temperature is below target - HYSTERESIS
+   - Automatically turns off when temperature reaches stable zone
 
-3. **Cold Air Fan (Pin 9)** - Activates when T > 62°C
-   - Draws in cooler ambient air to prevent overheating
-   - Protects sensitive foods from temperature damage
-   - Ensures even drying without product degradation
+2. **ELECTRIC HEATER (Pin 10)** - Backup heating
+   - Only activates when hot air fan alone insufficient (T < 54°C)
+   - Turns off once target temperature reached
+   - Ensures system reaches desired temp even on cold/cloudy days
 
-**Relay Behavior:**
+3. **COLD AIR FAN (Pin 9)** - Cooling
+   - Activates when temperature exceeds target + HYSTERESIS
+   - Draws cooler ambient air to prevent overheating
+   - Protects temperature-sensitive foods
+
+**Safety & Stability Features:**
+- Hysteresis (±2°C) prevents relay chatter and extends hardware lifespan
+- At least one fan always runs in stable zone to maintain air circulation and prevent humidity stagnation
+- Heater is always OFF when cooling (mutually exclusive operation)
+- LCD display shows active relay status in real-time for monitoring
+- Serial output logs all relay state changes with timestamps for debugging
+- Button debounce delay (300ms) prevents accidental multiple presses
+
+### Temperature Control Interface
+
+**Push Button Control:**
+- **Button UP (Pin 2)**: Increase target temperature by 1°C
+- **Button DOWN (Pin 3)**: Decrease target temperature by 1°C
+- **Valid Range**: 35°C to 75°C (enforced in code)
+- **Debounce Delay**: 300ms after each button press
+- **Detection Method**: Edge-triggered on button press (LOW→HIGH transition)
+
+**LCD Display (I2C address 0x3F):**
+
+Line 1: Temperature reading, target, and humidity
 ```
-Temp < 54°C   → Hot Air Fan + Electric Heater (full power)
-54°C ≤ Temp < 58°C → Hot Air Fan + Electric Heater
-58°C ≤ Temp ≤ 62°C → Idle (all relays off)
-Temp > 62°C   → Cold Air Fan (cooling)
+T:24.5→60C H:45%
+```
+- T: Current temperature from sensor
+- →: Arrow pointing to target temperature
+- Target: User-set target temperature (integer)
+- H: Current humidity percentage
+
+Line 2: Relay status and button controls
+```
+HOT FAN   +/-
+HEATER ON +/-
+COLD FAN  +/-
+IDLE      +/-
+```
+- Shows which relay is currently active
+- "+/-" prompt reminds user buttons are available for adjustment
+
+**Serial Monitor Output:**
+
+On startup:
+```
+Dehydrator Control System (DHT22)
+=========================================
+Temperature Control System
+Target Temperature: 60°C (adjustable via buttons)
+Button UP (Pin 2): Increase target temp
+Button DOWN (Pin 3): Decrease target temp
+Hysteresis: ±2°C
+=========================================
 ```
 
-**Safety Features:**
-- Hysteresis prevents relay chatter and extends hardware life
-- At least one fan always runs to prevent humidity stagnation
-- LCD display shows active relay status in real-time
-- Serial output logs all relay state changes for debugging
-- Push buttons allow safe runtime temperature adjustment (35-75°C)
+During operation:
+```
+[Temp: 24.5°C | Target: 60.0°C | Humidity: 45.3%] [Hot:ON | Heat:OFF | Cold:OFF]
+  > HOT AIR FAN ON (heating)
+```
+
+Button press:
+```
+Target Temperature: 61.0°C (increased via button)
+```
+
+Relay state changes:
+```
+  > HOT AIR FAN ON (heating)
+  > ELECTRIC HEATER ON (backup)
+  > ELECTRIC HEATER OFF
+  > COLD AIR FAN ON (cooling)
+```
+
+### Code Architecture
+
+**File Structure:**
+- `src/dht_main.cpp`: Main program using DHT22 sensor (single-wire digital)
+- `src/i2c_main.cpp`: Alternate program using SHT31 sensor (I2C protocol)
+
+**Key Functions:**
+
+| Function | File(s) | Purpose |
+|---|---|---|
+| `setup()` | Both | Initialize pins, sensors, LCD, serial communication |
+| `loop()` | Both | Main control loop (buttons checked every iteration, sensors every 2s) |
+| `handleButtonPresses()` | Both | Detect button presses and update target temperature |
+| `controlRelays()` | Both | Implement temperature control logic and activate/deactivate relays |
+| `updateLCDDisplay()` | Both | Format and display readings and relay status on LCD |
+| `scanI2CBus()` | i2c_main.cpp only | Detect SHT31 sensor on I2C bus at startup |
+
+**Global Variables:**
+```cpp
+float targetTemp = 60.0;        // User-adjustable target temperature
+bool hotAirFanActive;           // Tracks HOT AIR FAN relay state
+bool coldAirFanActive;          // Tracks COLD AIR FAN relay state
+bool heaterActive;              // Tracks ELECTRIC HEATER relay state
+```
+
+**Pin Configuration:**
+```cpp
+#define DHT_PIN 7               // DHT22 data pin (dht_main.cpp only)
+#define HOT_AIR_FAN_PIN 8       // Hot air fan relay
+#define COLD_AIR_FAN_PIN 9      // Cold air fan relay
+#define HEATER_PIN 10           // Electric heater relay
+#define BUTTON_UP_PIN 2         // Temperature up button
+#define BUTTON_DOWN_PIN 3       // Temperature down button
+// LCD address: 0x3F (I2C)
+// SHT31 address: 0x44 or 0x45 (I2C, auto-detected)
+```
 
 ## Quick Start
 
