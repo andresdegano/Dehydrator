@@ -1,8 +1,8 @@
 {
   "version": 1,
   "author": "Arduino Dehydrator Project",
-  "title": "Arduino Dehydrator with DHT22, 3 Relays & LCD Display",
-  "description": "Simulated Arduino Uno with DHT22 sensor, 3 relay modules (2 fans + heater), and LCD 1602 I2C display",
+  "title": "Arduino Dehydrator with DHT22, 3 Status LEDs & LCD Display",
+  "description": "Simulated Arduino Uno with DHT22 sensor, 3 status LEDs (Hot Fan, Cold Fan, Heater), 2 push buttons, and LCD 1602 I2C display",
   "parts": [
     {
       "type": "wokwi-arduino-uno",
@@ -23,37 +23,88 @@
       }
     },
     {
-      "type": "wokwi-relay",
-      "id": "relay1",
+      "type": "wokwi-led",
+      "id": "led1",
       "top": 300,
       "left": 300,
       "attrs": {
-        "name": "Hot Air Fan Relay (Pin 8)"
+        "name": "Hot Air Fan LED (Pin 8)",
+        "color": "red"
       }
     },
     {
-      "type": "wokwi-relay",
-      "id": "relay2",
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 280,
+      "left": 250,
+      "attrs": {
+        "name": "R1",
+        "resistance": "220Ω"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led2",
       "top": 400,
       "left": 300,
       "attrs": {
-        "name": "Cold Air Fan Relay (Pin 9)"
+        "name": "Cold Air Fan LED (Pin 9)",
+        "color": "blue"
       }
     },
     {
-      "type": "wokwi-relay",
-      "id": "relay3",
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 380,
+      "left": 250,
+      "attrs": {
+        "name": "R2",
+        "resistance": "220Ω"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led3",
       "top": 500,
       "left": 300,
       "attrs": {
-        "name": "Electric Heater Relay (Pin 10)"
+        "name": "Electric Heater LED (Pin 10)",
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 480,
+      "left": 250,
+      "attrs": {
+        "name": "R3",
+        "resistance": "220Ω"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 200,
+      "left": 600,
+      "attrs": {
+        "name": "Button UP (Pin 2)"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn2",
+      "top": 250,
+      "left": 600,
+      "attrs": {
+        "name": "Button DOWN (Pin 3)"
       }
     },
     {
       "type": "wokwi-lcd1602",
       "id": "lcd1",
       "top": 100,
-      "left": 600,
+      "left": 700,
       "attrs": {
         "name": "LCD 1602 (I2C)",
         "pins": "I2C"
@@ -81,55 +132,79 @@
     ],
     [
       "uno:8",
-      "relay1:IN",
+      "r1:1",
       "orange",
       []
     ],
     [
-      "uno:GND.1",
-      "relay1:GND",
-      "black",
+      "r1:2",
+      "led1:A",
+      "orange",
       []
     ],
     [
-      "uno:5V",
-      "relay1:VCC",
-      "red",
+      "led1:C",
+      "uno:GND.1",
+      "black",
       []
     ],
     [
       "uno:9",
-      "relay2:IN",
+      "r2:1",
       "blue",
       []
     ],
     [
-      "uno:GND.1",
-      "relay2:GND",
-      "black",
+      "r2:2",
+      "led2:A",
+      "blue",
       []
     ],
     [
-      "uno:5V",
-      "relay2:VCC",
-      "red",
+      "led2:C",
+      "uno:GND.1",
+      "black",
       []
     ],
     [
       "uno:10",
-      "relay3:IN",
+      "r3:1",
       "purple",
       []
     ],
     [
+      "r3:2",
+      "led3:A",
+      "purple",
+      []
+    ],
+    [
+      "led3:C",
       "uno:GND.1",
-      "relay3:GND",
       "black",
       []
     ],
     [
+      "uno:2",
+      "btn1:1",
+      "red",
+      []
+    ],
+    [
+      "btn1:2",
       "uno:5V",
-      "relay3:VCC",
+      "red",
+      []
+    ],
+    [
+      "uno:3",
+      "btn2:1",
+      "red",
+      []
+    ],
+    [
+      "btn2:2",
+      "uno:5V",
       "red",
       []
     ],
