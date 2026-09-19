@@ -1,0 +1,67 @@
+# PlatformIO
+.pio/
+.platformio/
+compile_commands.json
+
+# Build artifacts
+*.o
+*.a
+*.so
+build/
+dist/
+*.hex
+*.elf
+*.map
+*.lst
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+
+# Environment and Credentials (SENSITIVE)
+.env
+.env.local
+.env.*.local
+secrets.txt
+credentials.json
+config.local.*
+*.key
+*.pem
+*.p12
+*.pfx
+api_keys.txt
+tokens.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+serial_monitor.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Backups
+*.bak
+*.backup
+*~
