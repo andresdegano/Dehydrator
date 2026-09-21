@@ -1,15 +1,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SHT31.h>
-#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal.h>
 
 // Create SHT31 sensor instance (uses hardware I2C)
 // Default I2C address: 0x44
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
-// LCD configuration (I2C address 0x27, 16 columns, 2 rows)
-// Standard address for most LiquidCrystal_I2C modules
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// LCD configuration (4-bit mode, raw GPIO pins)
+// LCD RS, E, D4, D5, D6, D7
+LiquidCrystal lcd(4, 5, 6, 7, 11, 12);
 
 bool sensorFound = false;
 uint8_t sht31_address = 0x44;
@@ -23,6 +23,14 @@ uint8_t sht31_address = 0x44;
 #define BUTTON_UP_PIN 2     // Increase target temperature
 #define BUTTON_DOWN_PIN 3   // Decrease target temperature
 
+// LCD pins (4-bit mode - grouped together)
+#define LCD_RS 4            // Register select
+#define LCD_E 5             // Enable
+#define LCD_D4 6            // Data line 4
+#define LCD_D5 7            // Data line 5
+#define LCD_D6 11           // Data line 6
+#define LCD_D7 12           // Data line 7
+
 // Temperature control setpoint (now variable, can be adjusted via buttons)
 float targetTemp = 60.0;
 #define HYSTERESIS 2.0      // ±2°C to prevent relay chatter
@@ -35,15 +43,11 @@ bool coldAirFanActive = false;
 bool heaterActive = false;
 
 void scanI2CBus() {
-  Serial.println("\nScanning I2C bus for devices...");
   int deviceCount = 0;
   
   for (uint8_t addr = 0; addr < 128; addr++) {
     Wire.beginTransmission(addr);
     if (Wire.endTransmission() == 0) {
-      Serial.print("Found device at address: 0x");
-      if (addr < 16) Serial.print("0");
-      Serial.println(addr, HEX);
       deviceCount++;
       
       // Check if it's an SHT31 (typically at 0x44 or 0x45)
@@ -52,18 +56,12 @@ void scanI2CBus() {
       }
     }
   }
-  
-  Serial.print("Total devices found: ");
-  Serial.println(deviceCount);
-  Serial.println();
 }
 
 void setup() {
   // Initialize serial communication FIRST (critical for diagnostics)
   Serial.begin(9600);
   delay(1000);
-  
-  Serial.println("\n\nDiagnostic Start: Initializing pins...");
   
   // Initialize relay pins as outputs
   pinMode(HOT_AIR_FAN_PIN, OUTPUT);
@@ -80,18 +78,13 @@ void setup() {
   digitalWrite(COLD_AIR_FAN_PIN, LOW);
   digitalWrite(HEATER_PIN, LOW);
   
-  Serial.println("Pins initialized. Starting Wire...");
-  
-  // Initialize I2C for both LCD and SHT31 sensor
+  // Initialize I2C for SHT31 sensor
   Wire.begin();
   delay(500);
   
-  Serial.println("Wire initialized. Attempting LCD init...");
-  
-  // Initialize LCD display (skip if it hangs)
-  lcd.init();
+  // Initialize LCD display (4-bit mode)
+  lcd.begin(16, 2);
   delay(100);
-  lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.print("Dehydrator");
   lcd.setCursor(0, 1);
@@ -99,23 +92,8 @@ void setup() {
   delay(2000);
   lcd.clear();
   
-  Serial.println("LCD initialized successfully.");
-  
   // Wait for serial to be ready
   delay(2000);
-  
-  Serial.println("Dehydrator Control System (SHT31)");
-  Serial.println("=========================================");
-  Serial.println("Temperature Control System");
-  Serial.println("Target Temperature: 60°C (adjustable via buttons)");
-  Serial.println("Button UP (Pin 2): Increase target temp");
-  Serial.println("Button DOWN (Pin 3): Decrease target temp");
-  Serial.println("Hysteresis: ±2°C");
-  Serial.println("SHT31 connected to:");
-  Serial.println("  SDA: A4 (Pin 18)");
-  Serial.println("  SCL: A5 (Pin 19)");
-  Serial.println("  VCC: 5V");
-  Serial.println("  GND: GND\n");
   
   // Scan I2C bus
   scanI2CBus();
@@ -123,31 +101,15 @@ void setup() {
   // Try to initialize sensor at detected address
   if (sht31.begin(sht31_address)) {
     sensorFound = true;
-    Serial.print("SHT31 sensor initialized successfully at 0x");
-    if (sht31_address < 16) Serial.print("0");
-    Serial.println(sht31_address, HEX);
-    Serial.print("Heater status: ");
-    Serial.println(sht31.isHeaterEnabled() ? "ON" : "OFF");
   } else {
     // Try alternate address
     uint8_t alt_addr = (sht31_address == 0x44) ? 0x45 : 0x44;
-    Serial.print("Failed to find SHT31 at 0x");
-    if (sht31_address < 16) Serial.print("0");
-    Serial.println(sht31_address, HEX);
-    Serial.print("Trying alternate address 0x");
-    if (alt_addr < 16) Serial.print("0");
-    Serial.println(alt_addr, HEX);
     
     if (sht31.begin(alt_addr)) {
       sensorFound = true;
       sht31_address = alt_addr;
-      Serial.println("SHT31 sensor found at alternate address!");
-    } else {
-      Serial.println("ERROR: Could not find SHT31 sensor!");
-      Serial.println("Check wiring, power, and I2C pull-ups.\n");
     }
   }
-  Serial.println();
 }
 
 void controlRelays(float temperature) {
@@ -160,7 +122,6 @@ void controlRelays(float temperature) {
       digitalWrite(COLD_AIR_FAN_PIN, LOW);
       hotAirFanActive = true;
       coldAirFanActive = false;
-      Serial.println("  > HOT AIR FAN ON (heating)");
     }
     
     // If still too cold, activate electric heater backup
@@ -168,14 +129,12 @@ void controlRelays(float temperature) {
       if (!heaterActive) {
         digitalWrite(HEATER_PIN, HIGH);
         heaterActive = true;
-        Serial.println("  > ELECTRIC HEATER ON (backup)");
       }
     } else if (temperature >= targetTemp) {
       // Turn off heater once target is reached
       if (heaterActive) {
         digitalWrite(HEATER_PIN, LOW);
         heaterActive = false;
-        Serial.println("  > ELECTRIC HEATER OFF");
       }
     }
   } else if (temperature > (targetTemp + HYSTERESIS)) {
@@ -185,14 +144,12 @@ void controlRelays(float temperature) {
       digitalWrite(HOT_AIR_FAN_PIN, LOW);
       coldAirFanActive = true;
       hotAirFanActive = false;
-      Serial.println("  > COLD AIR FAN ON (cooling)");
     }
     
     // Make sure heater is off when cooling
     if (heaterActive) {
       digitalWrite(HEATER_PIN, LOW);
       heaterActive = false;
-      Serial.println("  > ELECTRIC HEATER OFF");
     }
   } else {
     // Temperature in stable zone: keep currently active fan running
@@ -200,14 +157,12 @@ void controlRelays(float temperature) {
     if (!hotAirFanActive && !coldAirFanActive) {
       digitalWrite(HOT_AIR_FAN_PIN, HIGH);
       hotAirFanActive = true;
-      Serial.println("  > HOT AIR FAN ON (circulation)");
     }
     
     // Ensure heater is off in stable zone
     if (heaterActive) {
       digitalWrite(HEATER_PIN, LOW);
       heaterActive = false;
-      Serial.println("  > ELECTRIC HEATER OFF");
     }
   }
 }
@@ -250,7 +205,6 @@ void handleButtonPresses() {
   static bool buttonDownStable = HIGH;     // Last confirmed stable state (HIGH = not pressed with pull-up)
   static unsigned long lastButtonUpActionTime = 0;
   static unsigned long lastButtonDownActionTime = 0;
-  static unsigned long lastDebugTime = 0;
   
   const uint8_t DEBOUNCE_COUNT = 10;       // Require 10 consecutive reads to confirm (eliminates noise)
   const unsigned long MIN_ACTION_INTERVAL = 300;  // 300ms minimum between actions
@@ -279,9 +233,6 @@ void handleButtonPresses() {
     if (currentTime - lastButtonUpActionTime >= MIN_ACTION_INTERVAL) {
       if (targetTemp < TEMP_MAX) {
         targetTemp += 1.0;
-        Serial.print("Target Temperature: ");
-        Serial.print(targetTemp, 1);
-        Serial.println("°C (UP)");
       }
       lastButtonUpActionTime = currentTime;
     }
@@ -313,9 +264,6 @@ void handleButtonPresses() {
     if (currentTime - lastButtonDownActionTime >= MIN_ACTION_INTERVAL) {
       if (targetTemp > TEMP_MIN) {
         targetTemp -= 1.0;
-        Serial.print("Target Temperature: ");
-        Serial.print(targetTemp, 1);
-        Serial.println("°C (DOWN)");
       }
       lastButtonDownActionTime = currentTime;
     }
@@ -324,21 +272,7 @@ void handleButtonPresses() {
     buttonDownStable = HIGH;
   }
   
-  // Debug: print detailed button state every 5 seconds
-  if (currentTime - lastDebugTime >= 5000) {
-    lastDebugTime = currentTime;
-    Serial.print("[DEBUG] UP(stable:");
-    Serial.print(buttonUpStable ? "H" : "L");
-    Serial.print(",counter:");
-    Serial.print(buttonUpCounter, DEC);
-    Serial.print(") DOWN(stable:");
-    Serial.print(buttonDownStable ? "H" : "L");
-    Serial.print(",counter:");
-    Serial.print(buttonDownCounter, DEC);
-    Serial.print(") Target:");
-    Serial.print(targetTemp, 0);
-    Serial.println("°C");
-  }
+
 }
 
 void loop() {
@@ -353,7 +287,6 @@ void loop() {
     lastSensorReadTime = currentTime;
     
     if (!sensorFound) {
-      Serial.println("Sensor not initialized. Check connection.");
       return;
     }
     
@@ -362,25 +295,7 @@ void loop() {
     float humidity = sht31.readHumidity();
     
     // Check for valid readings
-    if (isnan(temperature) || isnan(humidity)) {
-      Serial.println("ERROR: Failed to read from SHT31!");
-    } else {
-      // Display readings
-      Serial.print("[Temp: ");
-      Serial.print(temperature, 1);
-      Serial.print("°C | Target: ");
-      Serial.print(targetTemp, 1);
-      Serial.print("°C | Humidity: ");
-      Serial.print(humidity, 1);
-      Serial.print("%] ");
-      Serial.print("[Hot:");
-      Serial.print(hotAirFanActive ? "ON" : "OFF");
-      Serial.print(" | Heat:");
-      Serial.print(heaterActive ? "ON" : "OFF");
-      Serial.print(" | Cold:");
-      Serial.print(coldAirFanActive ? "ON" : "OFF");
-      Serial.println("]");
-      
+    if (!isnan(temperature) && !isnan(humidity)) {
       // Update LCD display
       updateLCDDisplay(temperature, humidity);
       
