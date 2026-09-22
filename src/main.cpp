@@ -8,7 +8,7 @@
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
 // LCD configuration (4-bit mode, raw GPIO pins)
-// LCD RS, E, D4, D5, D6, D7
+// LCD RS=4, E=5, D4=6, D5=7, D6=11, D7=12
 LiquidCrystal lcd(4, 5, 6, 7, 11, 12);
 
 bool sensorFound = false;
@@ -78,19 +78,27 @@ void setup() {
   digitalWrite(COLD_AIR_FAN_PIN, LOW);
   digitalWrite(HEATER_PIN, LOW);
   
-  // Initialize I2C for SHT31 sensor
-  Wire.begin();
-  delay(500);
+  // Wait for LCD power to stabilize
+  delay(200);
   
   // Initialize LCD display (4-bit mode)
   lcd.begin(16, 2);
+  delay(200);
+  
+  // Clear display
+  lcd.clear();
   delay(100);
-  lcd.setCursor(0, 0);
+  
+  // Test LCD by displaying initialization message
   lcd.print("Dehydrator");
   lcd.setCursor(0, 1);
   lcd.print("Starting...");
-  delay(2000);
+  delay(3000);
   lcd.clear();
+  
+  // Initialize I2C for SHT31 sensor (after LCD)
+  Wire.begin();
+  delay(500);
   
   // Wait for serial to be ready
   delay(2000);
