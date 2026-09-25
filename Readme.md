@@ -10,7 +10,7 @@ The dehydrator controller maintains optimal drying conditions by monitoring temp
 **Key Features:**
 - Real-time temperature and humidity monitoring via SHT31 I2C sensor
 - Automatic heating/cooling control to maintain target temperature
-- LCD display (16x2) showing current readings and active relay status
+- LCD 2004 display (20x4) over I2C showing current readings and active relay status
 - Push button interface for runtime temperature adjustment (20-75°C)
 - Non-blocking control loop (sensor reads every 2 seconds, buttons checked every loop)
 - Active-LOW button debouncing with 10-read confirmation and 300ms minimum interval
@@ -85,28 +85,24 @@ The `controlRelays()` function implements a three-zone control strategy:
 - **Debounce Method**: Counter-based (requires 10 consecutive stable reads)
 - **Debounce Delay**: 300ms minimum between button actions
 
-**LCD Display (16x2 Character, 4-bit GPIO Mode):**
+**LCD Display (20x4 Character, I2C Mode):**
 
-Connected using raw 4-bit mode GPIO pins for consolidated wiring:
+The LCD 2004 display connects via I2C (only 2 wires: SDA and SCL) for a cleaner wiring setup.
 
-Line 1: Temperature reading, target, and humidity
-```
-T:24.5→60C H:45%
-```
-- T: Current temperature from sensor
-- →: Arrow pointing to target temperature
-- Target: User-set target temperature (integer)
-- H: Current humidity percentage
+- **I2C Address**: 0x27 (default, try 0x3F if it doesn't initialize)
+- **Connection**: Uses Arduino I2C bus (A4 = SDA, A5 = SCL) shared with SHT31 sensor
 
-Line 2: Relay status and button controls
+Display Layout:
 ```
-HOT FAN   +/-
-HEATER ON +/-
-COLD FAN  +/-
-IDLE      +/-
+Row 0: T:25.1C  H:45%
+Row 1: Target: 60C
+Row 2: Status: HOT FAN
+Row 3: Adjust: (+) UP (-)
 ```
-- Shows which relay is currently active
-- "+/-" prompt reminds user buttons are available for adjustment
+- Row 0: Current temperature and humidity
+- Row 1: Target temperature setpoint
+- Row 2: Active relay status (HOT FAN / COLD FAN / HEATER ON / IDLE)
+- Row 3: Button instructions for temperature adjustment
 
 **Serial Monitor Output:**
 
@@ -172,15 +168,10 @@ bool heaterActive;              // Tracks ELECTRIC HEATER relay state
 #define HEATER_PIN 10           // Electric heater relay
 #define BUTTON_UP_PIN 2         // Temperature up button (GND-connected, active-LOW)
 #define BUTTON_DOWN_PIN 3       // Temperature down button (GND-connected, active-LOW)
-// LCD pins (4-bit mode - raw GPIO):
-#define LCD_RS 4                // Register select
-#define LCD_E 5                 // Enable
-#define LCD_D4 6                // Data line 4
-#define LCD_D5 7                // Data line 5
-#define LCD_D6 11               // Data line 6
-#define LCD_D7 12               // Data line 7
-// I2C Devices:
+#define LCD_I2C_ADDRESS 0x27    // LCD 2004 I2C address (try 0x3F if not detected)
+// I2C Devices (shared bus on A4/A5):
 // - SHT31 address: 0x44 or 0x45 (auto-detected)
+// - LCD 2004 address: 0x27 (configurable)
 // - I2C pins: A4 (SDA), A5 (SCL)
 ```
 
@@ -193,7 +184,7 @@ bool heaterActive;              // Tracks ELECTRIC HEATER relay state
 - SHT31 I2C temperature/humidity sensor
 - 2x push buttons (momentary switches, normally open)
 - 3x relay module (5V 3-channel)
-- 16x2 LCD display (without I2C backpack - raw GPIO wiring)
+- 20x4 LCD display with I2C backpack (I2C address 0x27 or 0x3F)
 
 ### Deploy to Real Hardware
 1. **Wire your SHT31 sensor** (see wiring diagrams below)
@@ -292,7 +283,7 @@ pio run -e uno-sht31 -t upload && pio device monitor -b 9600
 
 Make sure your Arduino is properly wired before uploading:
 - **SHT31**: SDA → A4, SCL → A5, VCC → 5V, GND → GND
-- **LCD**: Pins 4-7, 11-12 to Arduino for 4-bit mode (see wiring diagram)
+- **LCD 2004 I2C**: SDA → A4, SCL → A5, VCC → 5V, GND → GND
 - **Relays**: Pins 8, 9, 10 to relay module IN pins
 - **Buttons**: Pins 2, 3 to GND (active-LOW with pull-ups)
 
@@ -351,49 +342,35 @@ Relay 2 Common → Cold Air Fan Motor (AC 110/220V)
 Relay 3 Common → Electric Heater Element (AC 110/220V)
 ```
 
-**LCD Display (16x2, 4-bit GPIO Mode - Raw Pins):**
+**LCD Display (20x4, I2C Mode with I2C Backpack):**
 ```
-LCD Pin 4 (RS)   → Arduino Pin 4
-LCD Pin 6 (E)    → Arduino Pin 5
-LCD Pin 11 (D4)  → Arduino Pin 6
-LCD Pin 12 (D5)  → Arduino Pin 7
-LCD Pin 13 (D6)  → Arduino Pin 11
-LCD Pin 14 (D7)  → Arduino Pin 12
-LCD VCC (Pin 2)  → Arduino 5V
-LCD GND (Pin 1)  → Arduino GND
-LCD V0 (Pin 3)   → 10kΩ pot (contrast adjustment, ends to 5V and GND)
-LCD A (Pin 15)   → Arduino 5V (backlight)
-LCD K (Pin 16)   → Arduino GND (backlight)
+LCD I2C Backpack connections to Arduino:
+LCD SDA (I2C Data)   → Arduino A4
+LCD SCL (I2C Clock)  → Arduino A5
+LCD VCC              → Arduino 5V
+LCD GND              → Arduino GND
 ```
 
-**Complete Wiring Diagram (SHT31):**
+**Complete Wiring Diagram (SHT31 + LCD 2004 I2C):**
 ```
 Arduino Uno
 ├── Pin 2  → Button UP (to GND, active-LOW)
 ├── Pin 3  → Button DOWN (to GND, active-LOW)
-├── Pin 4  → LCD RS (Register Select)
-├── Pin 5  → LCD E (Enable)
-├── Pin 6  → LCD D4 (Data line 4)
-├── Pin 7  → LCD D5 (Data line 5)
 ├── Pin 8  → Relay 1 (Hot Air Fan)
 ├── Pin 9  → Relay 2 (Cold Air Fan)
 ├── Pin 10 → Relay 3 (Electric Heater)
-├── Pin 11 → LCD D6 (Data line 6)
-├── Pin 12 → LCD D7 (Data line 7)
-├── A4 (SDA) → SHT31 Sensor
-└── A5 (SCL) → SHT31 Sensor
+├── A4 (SDA) → SHT31 SDA + LCD I2C SDA (shared I2C bus)
+└── A5 (SCL) → SHT31 SCL + LCD I2C SCL (shared I2C bus)
 
 5V Rail
 ├── Relay Module VCC
 ├── SHT31 VCC
-├── LCD VCC
-└── LCD Backlight (Pin A)
+└── LCD VCC (through I2C backpack)
 
 GND Rail
 ├── Relay Module GND
 ├── SHT31 GND
-├── LCD GND
-├── LCD Backlight (Pin K)
+├── LCD GND (through I2C backpack)
 ├── Button UP pin
 └── Button DOWN pin
 ```
@@ -414,14 +391,14 @@ Readme.md           - This file
 ## Understanding the Code
 
 ### SHT31 Implementation (`src/main.cpp`)
-- Initializes I2C communication on Arduino pins A4/A5 for SHT31 sensor
+- Initializes I2C communication on Arduino pins A4/A5 for SHT31 sensor and LCD 2004
 - Detects SHT31 sensor on I2C bus (auto-detects address 0x44 or 0x45)
-- Initializes LCD display in 4-bit mode on GPIO pins 4-7, 11-12
+- Initializes LCD 2004 display in I2C mode (address 0x27, try 0x3F if not detected)
 - **Button Handling**: Pins 2 (UP) and 3 (DOWN) adjust `targetTemp` variable (20-75°C range)
 - Active-LOW buttons with counter-based debouncing (10 consecutive reads required)
 - Reads temperature and humidity every 2 seconds
 - Controls 3 relays based on dynamic temperature logic with ±2°C hysteresis
-- Updates 16x2 LCD display with real-time status
+- Updates 20x4 LCD display with real-time status (4 rows of information)
 - Outputs formatted data to serial (9600 baud)
 - Handles sensor errors gracefully
 - Example output: 
@@ -532,12 +509,13 @@ pio run -e uno-sht31
 |-------|----------|
 | Sensor not detected (ERROR: Could not find SHT31) | Check SDA/SCL wiring (A4/A5), verify power (5V/GND), check I2C address (default 0x44) |
 | Serial output not showing | Verify baud rate (9600), check USB connection, try device monitor -b 9600 |
-| LCD display blank | Check I2C address (0x3F typical), verify SDA/SCL connected to A4/A5 |
+| LCD display blank or not initializing | Check I2C address (default 0x27, try 0x3F), verify SDA/SCL connected to A4/A5, verify power |
+| LCD shows garbage or wrong characters | Check I2C address is correct for your LCD backpack, verify I2C communication with both devices |
 | Relays not activating | Check relay module power (5V), verify pin connections (8, 9, 10), check wire polarity |
 | Relays switching erratically | Verify sensor is reading correctly, check I2C pull-ups (4.7kΩ), reduce HYSTERESIS if needed |
 | Temperature not reaching target | Verify all fans/heater relay connections, check if relays are functioning with manual test |
 | Buttons not responding | Verify pins 2 and 3 connected to GND (not 5V), check button contacts for debris |
 | Buttons trigger too easily | Increase DEBOUNCE_COUNT from 10 to 15-20 in handleButtonPresses() |
 | Buttons require hard press | Check button contacts, verify electrical connection to GND, reduce DEBOUNCE_COUNT if needed |
-| I2C bus scan shows 0 devices | Check pull-up resistors on SDA/SCL (should be 4.7kΩ to 5V), verify power to sensors |
-| System hangs on startup | Verify SHT31 sensor wiring before powering on, check for short circuits on I2C bus |
+| I2C bus scan shows 0 devices | Check pull-up resistors on SDA/SCL (should be 4.7kΩ to 5V), verify power to sensors, verify both SHT31 and LCD are connected |
+| System hangs on startup | Verify SHT31 sensor and LCD wiring before powering on, check for short circuits on I2C bus

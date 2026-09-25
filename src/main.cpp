@@ -1,15 +1,14 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_SHT31.h>
-#include <LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
 
 // Create SHT31 sensor instance (uses hardware I2C)
 // Default I2C address: 0x44
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 
-// LCD configuration (4-bit mode, raw GPIO pins)
-// LCD RS=4, E=5, D4=6, D5=7, D6=11, D7=12
-LiquidCrystal lcd(4, 5, 6, 7, 11, 12);
+// LCD 2004 configuration (20 columns, 4 rows, I2C address 0x27)
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 bool sensorFound = false;
 uint8_t sht31_address = 0x44;
@@ -23,13 +22,8 @@ uint8_t sht31_address = 0x44;
 #define BUTTON_UP_PIN 2     // Increase target temperature
 #define BUTTON_DOWN_PIN 3   // Decrease target temperature
 
-// LCD pins (4-bit mode - grouped together)
-#define LCD_RS 4            // Register select
-#define LCD_E 5             // Enable
-#define LCD_D4 6            // Data line 4
-#define LCD_D5 7            // Data line 5
-#define LCD_D6 11           // Data line 6
-#define LCD_D7 12           // Data line 7
+// LCD 2004 I2C configuration
+#define LCD_I2C_ADDRESS 0x27  // Default I2C address for LCD 2004 (try 0x3F if this doesn't work)
 
 // Temperature control setpoint (now variable, can be adjusted via buttons)
 float targetTemp = 60.0;
@@ -81,15 +75,20 @@ void setup() {
   // Wait for LCD power to stabilize
   delay(200);
   
-  // Initialize LCD display (4-bit mode)
-  lcd.begin(16, 2);
-  delay(200);
+  // Initialize I2C LCD display (2004 format: 20x4)
+  lcd.init();
+  delay(100);
+  
+  // Enable backlight
+  lcd.backlight();
+  delay(100);
   
   // Clear display
   lcd.clear();
   delay(100);
   
   // Test LCD by displaying initialization message
+  lcd.setCursor(0, 0);
   lcd.print("Dehydrator");
   lcd.setCursor(0, 1);
   lcd.print("Starting...");
@@ -176,33 +175,35 @@ void controlRelays(float temperature) {
 }
 
 void updateLCDDisplay(float temperature, float humidity) {
-  // Clear display before writing new content
-  lcd.clear();
-  
-  // Line 1: Temperature reading → Target and Humidity (16 chars max)
-  // Format: "T:25.1->60 H:45%"
+  // Row 0: Temperature and humidity (20 chars max)
   lcd.setCursor(0, 0);
   lcd.print("T:");
-  if (temperature < 10) lcd.print(" ");  // Pad single digit
   lcd.print(temperature, 1);
-  lcd.print("->");
-  if (targetTemp < 10) lcd.print(" ");  // Pad single digit
-  lcd.print((int)targetTemp);
-  lcd.print(" H:");
+  lcd.print("C  H:");
   lcd.print((int)humidity);
-  lcd.print("%");
+  lcd.print("%         ");  // Pad to 20 chars
   
-  // Line 2: Heating/Cooling Status (16 chars max)
+  // Row 1: Target temperature (20 chars max)
   lcd.setCursor(0, 1);
+  lcd.print("Target: ");
+  lcd.print((int)targetTemp);
+  lcd.print("C                 ");  // Pad to 20 chars
+  
+  // Row 2: Heating/Cooling Status (20 chars max)
+  lcd.setCursor(0, 2);
   if (heaterActive) {
-    lcd.print("HEATER ON   +/-");
+    lcd.print("Status: HEATER ON   ");
   } else if (hotAirFanActive) {
-    lcd.print("HOT FAN     +/-");
+    lcd.print("Status: HOT FAN     ");
   } else if (coldAirFanActive) {
-    lcd.print("COLD FAN    +/-");
+    lcd.print("Status: COLD FAN    ");
   } else {
-    lcd.print("IDLE        +/-");
+    lcd.print("Status: IDLE        ");
   }
+  
+  // Row 3: Button instructions (20 chars max)
+  lcd.setCursor(0, 3);
+  lcd.print("Adjust: (+) UP (-)  ");
 }
 
 void handleButtonPresses() {
