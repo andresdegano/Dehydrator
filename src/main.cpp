@@ -175,35 +175,52 @@ void controlRelays(float temperature) {
 }
 
 void updateLCDDisplay(float temperature, float humidity) {
-  // Row 0: Temperature and humidity (20 chars max)
+  char buffer[21];
+  char tempStr[10];
+  
+  // Row 0: Temperature and humidity (exactly 20 chars)
   lcd.setCursor(0, 0);
-  lcd.print("T:");
-  lcd.print(temperature, 1);
-  lcd.print("C  H:");
-  lcd.print((int)humidity);
-  lcd.print("%         ");  // Pad to 20 chars
+  dtostrf(temperature, 4, 1, tempStr);
+  // Remove leading spaces from temperature string
+  char *tempPtr = tempStr;
+  while (*tempPtr == ' ') tempPtr++;
+  sprintf(buffer, "T:%sC H:%2d%%", tempPtr, (int)humidity);
+  int len = strlen(buffer);
+  for(int i = len; i < 20; i++) buffer[i] = ' ';
+  buffer[20] = '\0';
+  lcd.print(buffer);
   
-  // Row 1: Target temperature (20 chars max)
+  // Row 1: Target temperature (exactly 20 chars)
   lcd.setCursor(0, 1);
-  lcd.print("Target: ");
-  lcd.print((int)targetTemp);
-  lcd.print("C                 ");  // Pad to 20 chars
+  sprintf(buffer, "Target: %2dC", (int)targetTemp);
+  len = strlen(buffer);
+  for(int i = len; i < 20; i++) buffer[i] = ' ';
+  buffer[20] = '\0';
+  lcd.print(buffer);
   
-  // Row 2: Heating/Cooling Status (20 chars max)
+  // Row 2: Heating/Cooling Status (exactly 20 chars)
   lcd.setCursor(0, 2);
   if (heaterActive) {
-    lcd.print("Status: HEATER ON   ");
+    sprintf(buffer, "Status: HEATER ON");
   } else if (hotAirFanActive) {
-    lcd.print("Status: HOT FAN     ");
+    sprintf(buffer, "Status: HOT FAN");
   } else if (coldAirFanActive) {
-    lcd.print("Status: COLD FAN    ");
+    sprintf(buffer, "Status: COLD FAN");
   } else {
-    lcd.print("Status: IDLE        ");
+    sprintf(buffer, "Status: IDLE");
   }
+  len = strlen(buffer);
+  for(int i = len; i < 20; i++) buffer[i] = ' ';
+  buffer[20] = '\0';
+  lcd.print(buffer);
   
-  // Row 3: Button instructions (20 chars max)
+  // Row 3: Button instructions (exactly 20 chars)
   lcd.setCursor(0, 3);
-  lcd.print("Adjust: (+) UP (-)  ");
+  sprintf(buffer, "Adjust: +/-");
+  len = strlen(buffer);
+  for(int i = len; i < 20; i++) buffer[i] = ' ';
+  buffer[20] = '\0';
+  lcd.print(buffer);
 }
 
 void handleButtonPresses() {
